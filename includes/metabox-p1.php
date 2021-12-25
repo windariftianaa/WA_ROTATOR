@@ -223,6 +223,7 @@ function wpbc_contacts_form_meta_box_handler($item)
 <?php
 }
 
+
 function wpbc_urls_form_page_handler()
 {
     global $wpdb;
@@ -360,10 +361,14 @@ function wpbc_links_form_meta_box_handler($item1)
                         <label for="url_ku"><?php _e('Nama Grup Baru :', 'wpbc') ?></label>
                         <br>
                         <input id="url_ku" name="url_ku" type="text" placeholder="WA Rotator" value="<?php echo esc_attr($item1['url_ku']) ?>" required>
-                        <br>
+                        
+                    </p>
+                </div>
+
+                <div class="form2bc">
+                    <p>
                         <label for="pixel_type"><?php _e('Event Pixel :', 'wpbc') ?></label>
                         <br>
-
                         <select
                             id="pixel_type" name="pixel_type" required
                         >
@@ -407,6 +412,7 @@ function wpbc_links_form_meta_box_handler($item1)
                 <th scope="col">Id Grup</th>
                 <th scope="col">Nama Grup</th>
                 <th scope="col">Jenis FB Pixel</th>
+                <th scope="col">URL Group</th>
                 <th scope="col">Pilihan</th>
             </tr>
         </thead>
@@ -417,6 +423,9 @@ function wpbc_links_form_meta_box_handler($item1)
                     <td><?php echo $row->id_url ?></td>
                     <td><?php echo "$row->url_ku" ?></td>
                     <td><?php echo "$row->pixel_type" ?></td>
+                    <td>
+                        <a href="<?=get_site_url()."/".rawurlencode("$row->url_ku")?>" target="_blank"><?=get_site_url()."/".rawurlencode("$row->url_ku")?></a>
+                    </td>
                     <td>
                         <a href="?page=urls_form&id_url=<?php echo "$row->id_url" ?>&url_ku=<?php echo "$row->url_ku&action=edit" ?>">Edit</a> |
                         <a href="?page=urls_form&id_url=<?php echo "$row->id_url" ?>&url_ku=<?php echo "$row->url_ku&action=delete" ?>">Hapus</a>
@@ -539,7 +548,7 @@ function wpbc_ubahs_form_meta_box_handler($item)
                     <p>
                         <label for="name"><?php _e('Name :', 'wpbc') ?></label>
                         <br>
-                        <input id="name" name="name" type="text" placeholder="NameB" value="<?php echo esc_attr($item['name']) ?>" required>
+                        <input id="name" name="name" type="text" placeholder="Name" value="<?php echo esc_attr($item['name']) ?>" required>
                     </p>
                 </div>
 
@@ -588,3 +597,116 @@ function wpbc_ubahs_form_meta_box_handler($item)
     </tbody>
 <?php
 }
+
+
+
+function wpbc_setting_form_page_handler()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'datawpfbpixel';
+    $message = '';
+    $notice = '';
+    $default = array(
+        'pixel_id'      => '0',
+        'enable'        => '0',
+    );
+
+    if (isset($_REQUEST['nonce']) && wp_verify_nonce($_REQUEST['nonce'], basename(__FILE__))) {
+        $item2 = shortcode_atts($default, $_REQUEST);
+        $item_valid = wpbc_validate_setting($item2);
+        if ($item_valid === true) {
+            $result = $wpdb->update($table_name, $item2, array('id' => '1'));
+            if ($result) {
+                $message = __('Item was successfully updated', 'wpbc');
+            } else {
+                $notice = __('There was an error while updating item', 'wpbc');
+            }
+        } else {
+            $notice = $item_valid;
+        }
+    } else {
+
+        $item2 = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name WHERE 
+            id = 1"), ARRAY_A);
+            if (!$item2) {
+                $item2 = $default;
+                $notice = __('Pixel ID not found', 'wpbc');
+            }
+    }
+
+    add_meta_box(
+        'ubahs_form_meta_box',
+        __('Setting', 'wpbc'),
+        'wpbc_setting_form_meta_box_handler',
+        'settings',
+        'normal',
+        'default'
+    );
+
+?>
+    <div class="wrap">
+        <div class="icon32 icon32-posts-post" id="icon-edit"><br></div>
+        <h2><?php _e('Setting', 'wpbc') ?>
+        </h2>
+        <?php if (!empty($notice)) : ?>
+            <div id="notice" class="error">
+                <p><?php echo $notice ?></p>
+            </div>
+        <?php endif; ?>
+        <?php if (!empty($message)) : ?>
+            <div id="message" class="updated">
+                <p><?php echo $message ?></p>
+            </div>
+        <?php endif; ?>
+        <form id="form" method="POST">
+            <input type="hidden" name="nonce" value="<?php echo wp_create_nonce(basename(__FILE__)) ?>" />
+            <div class="metabox-holder" id="poststuff">
+                <div id="post-body">
+                    <div id="post-body-content">
+                        <?php do_meta_boxes('settings', 'normal', $item2); ?>
+                        <input type="submit" value="<?php _e('Save', 'wpbc') ?>" id="submit" class="button-primary" name="submit">
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </div>
+
+<?php
+}
+
+function wpbc_setting_form_meta_box_handler($item2)
+{
+?>
+    <tbody>
+        <div class="formdatabc">
+            <form>
+                <div class="form2bc">
+                    <p>
+                        <label for="pixel_id"><?php _e('Facebook Pixel ID :', 'wpbc') ?></label><br>
+                        <input id="pixel_id"  name="pixel_id" type="text" placeholder="Pixel ID" value="<?php echo esc_attr($item2['pixel_id']) ?>" required style="margin-right: 5px;" <?=($item2['enable']==='0')?"readOnly":""?>><br>
+                        <input type="checkbox" id="enable" name="enable" onclick="checkboxcheck()" value="1" style="width: 1px; margin-right: 5px;" <?=($item2['enable']==='1')?"checked":""?>>
+                        <label for="pixel_id" style="margin-right: 5px;"><?php _e('Enable', 'wpbc') ?></label>
+                    </p>
+                </div>
+                    </p>
+                </div>
+            </form>
+        </div>
+        <script type="text/javascript">
+            function checkboxcheck(){
+                var chckbox = document.getElementById("enable");
+                var pixid = document.getElementById("pixel_id");
+                var isenabled = chckbox.checked;
+                if(!isenabled){
+                    pixid.readOnly = true;
+                }else{
+                    pixid.readOnly = false;
+                }
+            }
+        </script>
+    </tbody>
+<?php
+}
+
+

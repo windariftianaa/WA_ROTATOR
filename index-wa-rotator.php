@@ -19,19 +19,16 @@ function rotatorinit()
 {
     $f = "";
     foreach (ambil_data_url() as $row) {
-        if (isset($_GET["$row->url_ku"])) {
+        if (basename($_SERVER['REQUEST_URI']) === rawurlencode($row->url_ku)) {
             loading1();
             waUrl($row->id_url,$row->pixel_type);
-            wa_link_page($f,$row->pixel_type);
+            //wa_link_page($f,$row->pixel_type);
         }
     }
 }
 
-
 add_action('init', 'rotatorinit');
-
 require plugin_dir_path(__FILE__) . 'includes/metabox-p1.php';
-
 function wpbc_custom_admin_styles()
 {
     wp_enqueue_style('custom-styles', plugins_url('/css/styles.css', __FILE__));
@@ -93,8 +90,14 @@ function wpbc_install()
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
     dbDelta($sql);
 
-    add_option('wpbc_db_version', $wpbc_db_version);
+    $sql = "CREATE TABLE ". $wpdb->prefix . "datawpfbpixel (id INT(1) NOT NULL, pixel_id VARCHAR(50) NOT NULL, enable int(1) NOT NULL, PRIMARY KEY(id));";
+    require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
+    dbDelta($sql);
 
+    $sql2 = "INSERT INTO ". $wpdb->prefix . "datawpfbpixel VALUES ('1', '0', '0');";
+    dbDelta($sql2);
+
+    add_option('wpbc_db_version', $wpbc_db_version);
     $installed_ver = get_option('wpbc_db_version');
     if ($installed_ver != $wpbc_db_version) {
         $sql = "CREATE TABLE " . $table_name . " (
@@ -223,7 +226,8 @@ class Custom_Table_Example_List_Table extends WP_List_Table
     {
 
         $actions = array(
-            'pilih' => sprintf('', $_REQUEST['page'], $item['urlgrup'], __('Copy Grup ', 'wpbc')),
+            'pilih' => sprintf('
+<a id="%s" class="copy_grup_text" href="#" onclick="copy_url_text()"> Copy URL</a> <script type="text/javascript">function copy_url_text(){navigator.clipboard.writeText(event.srcElement.id); alert("URL telah disalin keclipboard");}</script>', $item['urlgrup'], __('Copy Grup ', 'wpbc')),
 
         );
 
@@ -311,6 +315,7 @@ class Custom_Table_Example_List_Table extends WP_List_Table
             <h4>Wa Rotator</h4>
             <input type="text" value="<?php echo $ids ?> " id="pilih" name="pilih" readonly />
             <button type="button" onclick="copy_text()">Copy</button>
+            
 
     <?php
 
@@ -340,8 +345,9 @@ class Custom_Table_Example_List_Table extends WP_List_Table
         $orderby = (isset($_REQUEST['orderby']) && in_array($_REQUEST['orderby'], array_keys($this->get_sortable_columns()))) ? $_REQUEST['orderby'] : 'name';
         $order = (isset($_REQUEST['order']) && in_array($_REQUEST['order'], array('asc', 'desc'))) ? $_REQUEST['order'] : 'asc';
 
+
         $situs = get_site_url();
-        $this->items = $wpdb->get_results($wpdb->prepare("SELECT datacs.id, datacs.name, datacs.phone,IF(datacs.isdeeplink<0, 'Whatsapp Deeplink', 'Whatsapp API URL') as deeplinkstr, datacs.click, datacs.pilgrup,  CONCAT('$situs','?', urlku.url_ku) as urlgrup 
+        $this->items = $wpdb->get_results($wpdb->prepare("SELECT datacs.id, datacs.name, datacs.phone,IF(datacs.isdeeplink<0, 'Whatsapp Deeplink', 'Whatsapp API URL') as deeplinkstr, datacs.click, datacs.pilgrup,  CONCAT('$situs','/', urlku.url_ku) as urlgrup 
                             FROM $table_name as datacs,  $table_name2 as urlku 
                             where datacs.pilgrup = urlku.id_url ORDER BY $orderby $order LIMIT %d OFFSET %d", $per_page, $paged), ARRAY_A);
 
@@ -357,17 +363,13 @@ class Custom_Table_Example_List_Table extends WP_List_Table
 
 function wpbc_admin_menu()
 {
-
-
     add_menu_page(__('WA Rotator', 'wpbc'), __('WA Rotator', 'wpbc'), 'activate_plugins', 'contacts', 'wpbc_contacts_page_handler');
-
-    add_submenu_page('contacts', __('Contact ', 'wpbc'), __('Contact ', 'wpbc'), 'activate_plugins', 'contacts', 'wpbc_contacts_page_handler');
-
-    add_submenu_page('contacts', __('Add new', 'wpbc'), __('Add New Contact', 'wpbc'), 'activate_plugins', 'contacts_form', 'wpbc_contacts_form_page_handler');
-
-    add_submenu_page('contacts', __('Add new', 'wpbc'), __('Add New Group', 'wpbc'), 'activate_plugins', 'urls_form', 'wpbc_urls_form_page_handler');
-
+    add_submenu_page('contacts', __('Daftar Kontak', 'wpbc'), __('Daftar Kontak ', 'wpbc'), 'activate_plugins', 'contacts', 'wpbc_contacts_page_handler');
+    add_submenu_page('contacts', __('Add new', 'wpbc'), __('New Contact', 'wpbc'), 'activate_plugins', 'contacts_form', 'wpbc_contacts_form_page_handler');
+    add_submenu_page('contacts', __('Add new', 'wpbc'), __('Group Link', 'wpbc'), 'activate_plugins', 'urls_form', 'wpbc_urls_form_page_handler');
+    add_submenu_page('contacts', __('Setting', 'wpbc'), __('Setting', 'wpbc'), 'activate_plugins', 'setting_form', 'wpbc_setting_form_page_handler');
     add_submenu_page('contacts', __('Add new', 'wpbc'), __('', 'wpbc'), 'activate_plugins', 'ubahs_form', 'wpbc_ubahs_form_page_handler');
+
 }
 
 
@@ -406,7 +408,7 @@ function wpbc_validate_link($item1)
     $messages = array();
     global $wpdb;
     $table_name3 = $wpdb->prefix . 'urlku';
-    if (empty($item1['url_ku'])) $messages[] = __('Name is required', 'wpbc');
+    if (empty($item1['url_ku'])) $messages[] = __('Grup Name is required', 'wpbc');
 
     if (empty($messages)) return true;
     return implode('<br />', $messages);
@@ -416,8 +418,16 @@ function wpbc_validate_ubah($item1)
 {
     $messages = array();
 
-    if (empty($item1['phone'])) $messages[] = __('Name is required', 'wpbc');
+    if (empty($item1['phone'])) $messages[] = __('Phone is required', 'wpbc');
 
+    if (empty($messages)) return true;
+    return implode('<br />', $messages);
+}
+
+function wpbc_validate_setting($item1)
+{
+    $messages = array();
+    if (empty($item1['pixel_id']) && $item1['enable']===1) $messages[] = __('Pixel ID is required', 'wpbc');
     if (empty($messages)) return true;
     return implode('<br />', $messages);
 }
@@ -484,10 +494,17 @@ function wpbc_page_handler_link($g)
 
 add_shortcode('whatsup-plugin', 'wa_link_page');
 
-function wa_link_page($f,$pt)
+function wa_link_page($f,$pt,$e,$pix_id)
 {
     global $wpdb;
     do_action( 'wp_head' );
+    if($e==1){
+        echo "<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window, document,'script','https://connect.facebook.net/en_US/fbevents.js');fbq('init', '".$pix_id."');</script><noscript><img height='1' width='1' style='display:none'src='https://www.facebook.com/tr?id=".$pix_id."&ev=PageView&noscript=1'/></noscript>";
+    }
+
+    
+    
+
     echo '<script type="text/javascript">fbq("track", "'.$pt.'");</script>';
     echo  "<meta content=1;url=" . $f . " http-equiv='refresh' />";
     exit;
@@ -568,6 +585,14 @@ function waUrl($f,$pt)
         $wpdb->prepare("SELECT isdeeplink from {$wpdb->prefix}datacs where pilgrup = $p AND id = %d", $id)
     );
 
+    $e = $wpdb->get_var(
+        $wpdb->prepare("SELECT enable from {$wpdb->prefix}datawpfbpixel where id = '1'")
+    );
+
+    $pix_id = $wpdb->get_var(
+        $wpdb->prepare("SELECT pixel_id from {$wpdb->prefix}datawpfbpixel where id = '1'")
+    );
+
     $data_performa = $wpdb->prefix . 'data_performa';
     $item['phone'] = $kontak;
     $result = $wpdb->insert($data_performa, $item);
@@ -582,9 +607,7 @@ function waUrl($f,$pt)
     }else{
         $r = 'https://api.whatsapp.com/send?phone=' . $kontak . '&text=' . $text_encode;
     }
-
-
-    wa_link_page($r,$pt);
+    wa_link_page($r,$pt,$e,$pix_id);
 }
 
 
