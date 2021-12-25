@@ -365,10 +365,10 @@ function wpbc_admin_menu()
 {
     add_menu_page(__('WA Rotator', 'wpbc'), __('WA Rotator', 'wpbc'), 'activate_plugins', 'contacts', 'wpbc_contacts_page_handler');
     add_submenu_page('contacts', __('Daftar Kontak', 'wpbc'), __('Daftar Kontak ', 'wpbc'), 'activate_plugins', 'contacts', 'wpbc_contacts_page_handler');
-    add_submenu_page('contacts', __('Add new', 'wpbc'), __('New Contact', 'wpbc'), 'activate_plugins', 'contacts_form', 'wpbc_contacts_form_page_handler');
-    add_submenu_page('contacts', __('Add new', 'wpbc'), __('Group Link', 'wpbc'), 'activate_plugins', 'urls_form', 'wpbc_urls_form_page_handler');
+    add_submenu_page('contacts', __('Tambah Kontak', 'wpbc'), __('New Contact', 'wpbc'), 'activate_plugins', 'contacts_form', 'wpbc_contacts_form_page_handler');
+    add_submenu_page('contacts', __('Group Link', 'wpbc'), __('Group Link', 'wpbc'), 'activate_plugins', 'urls_form', 'wpbc_urls_form_page_handler');
     add_submenu_page('contacts', __('Setting', 'wpbc'), __('Setting', 'wpbc'), 'activate_plugins', 'setting_form', 'wpbc_setting_form_page_handler');
-    add_submenu_page('contacts', __('Add new', 'wpbc'), __('', 'wpbc'), 'activate_plugins', 'ubahs_form', 'wpbc_ubahs_form_page_handler');
+    add_submenu_page('contacts', __('Edit Kontak', 'wpbc'), __('', 'wpbc'), 'activate_plugins', 'ubahs_form', 'wpbc_ubahs_form_page_handler');
 
 }
 

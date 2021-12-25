@@ -424,7 +424,10 @@ function wpbc_links_form_meta_box_handler($item1)
                     <td><?php echo "$row->url_ku" ?></td>
                     <td><?php echo "$row->pixel_type" ?></td>
                     <td>
-                        <a href="<?=get_site_url()."/".rawurlencode("$row->url_ku")?>" target="_blank"><?=get_site_url()."/".rawurlencode("$row->url_ku")?></a>
+                        <a href="<?=get_site_url()."/".rawurlencode("$row->url_ku")?>" target="_blank">
+                            <?=get_site_url()."/".("$row->url_ku")?>
+                                
+                            </a>
                     </td>
                     <td>
                         <a href="?page=urls_form&id_url=<?php echo "$row->id_url" ?>&url_ku=<?php echo "$row->url_ku&action=edit" ?>">Edit</a> |
@@ -685,14 +688,21 @@ function wpbc_setting_form_meta_box_handler($item2)
                     <p>
                         <label for="pixel_id"><?php _e('Facebook Pixel ID :', 'wpbc') ?></label><br>
                         <input id="pixel_id"  name="pixel_id" type="text" placeholder="Pixel ID" value="<?php echo esc_attr($item2['pixel_id']) ?>" required style="margin-right: 5px;" <?=($item2['enable']==='0')?"readOnly":""?>><br>
-                        <input type="checkbox" id="enable" name="enable" onclick="checkboxcheck()" value="1" style="width: 1px; margin-right: 5px;" <?=($item2['enable']==='1')?"checked":""?>>
-                        <label for="pixel_id" style="margin-right: 5px;"><?php _e('Enable', 'wpbc') ?></label>
+
                     </p>
                 </div>
+
+                <div class="form2bc" style="margin-top: -10px;"> 
+                    <p>
+                        <input type="checkbox" id="enable" name="enable" onclick="checkboxcheck()" value="1" style="width: 1px; margin-right: 5px;" <?=($item2['enable']==='1')?"checked":""?>>
+                        <label for="pixel_id" style="margin-right: 5px;"><?php _e('Aktifkan Fitur Facebook Pixel ID', 'wpbc') ?></label>
+                        <br><small style="color: #6da38f;">*Untuk menonaktifkan hapus centang checkbox diatas.</small>
                     </p>
                 </div>
             </form>
         </div>
+
+
         <script type="text/javascript">
             function checkboxcheck(){
                 var chckbox = document.getElementById("enable");
