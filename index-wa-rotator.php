@@ -21,11 +21,12 @@ function rotatorinit()
     foreach (ambil_data_url() as $row) {
         if (isset($_GET["$row->url_ku"])) {
             loading1();
-            waUrl($row->id_url);
-            wa_link_page($f);
+            waUrl($row->id_url,$row->pixel_type);
+            wa_link_page($f,$row->pixel_type);
         }
     }
 }
+
 
 add_action('init', 'rotatorinit');
 
@@ -61,6 +62,7 @@ function wpbc_install()
       name VARCHAR (50) NOT NULL,
       phone VARCHAR(15) NOT NULL,
       click int(11) NOT NULL,
+      isdeeplink int(1) NOT NULL,
       pilgrup int (11) NOT NULL, 
       note text NOT NULL, 
       PRIMARY KEY  (id)
@@ -73,6 +75,7 @@ function wpbc_install()
     $sql = "CREATE TABLE " . $table_name3 . " (
         id_url int(11) NOT NULL,
         url_ku VARCHAR (150) NOT NULL,
+        pixel_type VARCHAR (100) NOT NULL,
         PRIMARY KEY  (id_url)
       );";
     require_once(ABSPATH . 'wp-admin/includes/upgrade.php');
@@ -100,6 +103,7 @@ function wpbc_install()
           phone VARCHAR(15) NOT NULL,
           click int(11) NOT NULL,
           pilgrup int (11) NOT NULL,
+          isdeeplink int(1) NOT NULL,
           PRIMARY KEY  (id), 
           ADD CONSTRAINT 'fkurl' FOREIGN KEY (`pilgrub`)
           REFERENCES {$table_name3} (`id_url`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -219,7 +223,7 @@ class Custom_Table_Example_List_Table extends WP_List_Table
     {
 
         $actions = array(
-            'pilih' => sprintf('<a href="?page=%s&action=pilih&urlgrup=%s">%s</a>', $_REQUEST['page'], $item['urlgrup'], __('Copy Grup ', 'wpbc')),
+            'pilih' => sprintf('', $_REQUEST['page'], $item['urlgrup'], __('Copy Grup ', 'wpbc')),
 
         );
 
@@ -259,10 +263,11 @@ class Custom_Table_Example_List_Table extends WP_List_Table
     {
         $columns = array(
             'cb' => '<input type="checkbox" />',
-            'name'      => __('Name', 'wpbc'),
-            'phone'     => __('Phone', 'wpbc'),
-            'click'     => __('Hits', 'wpbc'),
-            'urlgrup'   => __('URL Grub', 'wpbc'),
+            'name'          => __('Name', 'wpbc'),
+            'phone'         => __('Phone', 'wpbc'),
+            'deeplinkstr'    => __('Tipe URL', 'wpbc'),
+            'click'         => __('Hits', 'wpbc'),
+            'urlgrup'       => __('URL Grub', 'wpbc'),
         );
         return $columns;
     }
@@ -271,11 +276,11 @@ class Custom_Table_Example_List_Table extends WP_List_Table
     {
         $sortable_columns = array(
             'id'        => array('id', true),
-            'name'      => array('name', true),
-            'phone'     => array('phone', true),
-            'click'     => array('click', true),
-            'pilgrup'   => array('pilgrup', true),
-            'urlgrup'   => array('urlgrup', true),
+            'name'          => __('Name', 'wpbc'),
+            'phone'         => __('Phone', 'wpbc'),
+            'deeplinkstr'    => __('Tipe URL', 'wpbc'),
+            'click'         => __('Hits', 'wpbc'),
+            'urlgrup'       => __('URL Grub', 'wpbc'),
         );
         return $sortable_columns;
     }
@@ -336,7 +341,7 @@ class Custom_Table_Example_List_Table extends WP_List_Table
         $order = (isset($_REQUEST['order']) && in_array($_REQUEST['order'], array('asc', 'desc'))) ? $_REQUEST['order'] : 'asc';
 
         $situs = get_site_url();
-        $this->items = $wpdb->get_results($wpdb->prepare("SELECT datacs.id, datacs.name, datacs.phone, datacs.click, datacs.pilgrup,  CONCAT('$situs','?', urlku.url_ku) as urlgrup 
+        $this->items = $wpdb->get_results($wpdb->prepare("SELECT datacs.id, datacs.name, datacs.phone,IF(datacs.isdeeplink<0, 'Whatsapp Deeplink', 'Whatsapp API URL') as deeplinkstr, datacs.click, datacs.pilgrup,  CONCAT('$situs','?', urlku.url_ku) as urlgrup 
                             FROM $table_name as datacs,  $table_name2 as urlku 
                             where datacs.pilgrup = urlku.id_url ORDER BY $orderby $order LIMIT %d OFFSET %d", $per_page, $paged), ARRAY_A);
 
@@ -479,9 +484,11 @@ function wpbc_page_handler_link($g)
 
 add_shortcode('whatsup-plugin', 'wa_link_page');
 
-function wa_link_page($f)
+function wa_link_page($f,$pt)
 {
     global $wpdb;
+    do_action( 'wp_head' );
+    echo '<script type="text/javascript">fbq("track", "'.$pt.'");</script>';
     echo  "<meta content=1;url=" . $f . " http-equiv='refresh' />";
     exit;
 }
@@ -502,7 +509,7 @@ function wpbc_page_handler_data()
 }
 
 
-function waUrl($f)
+function waUrl($f,$pt)
 {
     global $konten;
     global $nilai;
@@ -557,6 +564,10 @@ function waUrl($f)
         $wpdb->prepare("SELECT click from {$wpdb->prefix}datacs where pilgrup = $p AND id = %d", $id)
     );
 
+    $isdeeplink = $wpdb->get_var(
+        $wpdb->prepare("SELECT isdeeplink from {$wpdb->prefix}datacs where pilgrup = $p AND id = %d", $id)
+    );
+
     $data_performa = $wpdb->prefix . 'data_performa';
     $item['phone'] = $kontak;
     $result = $wpdb->insert($data_performa, $item);
@@ -564,9 +575,16 @@ function waUrl($f)
     $wpdb->query("UPDATE {$wpdb->prefix}datacs SET `click` = ($click + 1) WHERE `phone` = '$kontak' AND pilgrup = $p");
 
     $text_encode = urlencode("$pesan");
-    $r = 'https://api.whatsapp.com/send?phone=' . $kontak . '&text=' . $text_encode;
+    
 
-    wa_link_page($r);
+    if($isdeeplink){
+        $r = 'whatsapp://send?phone=' . $kontak . '&text=' . $text_encode;
+    }else{
+        $r = 'https://api.whatsapp.com/send?phone=' . $kontak . '&text=' . $text_encode;
+    }
+
+
+    wa_link_page($r,$pt);
 }
 
 

@@ -53,11 +53,12 @@ function wpbc_contacts_form_page_handler()
     $notice = '';
 
     $default = array(
-        'id'        => '',
-        'name'      => '',
-        'phone'     => '',
-        'pilgrup'   => '',
-        'note'      => '',
+        'id'            => '',
+        'name'          => '',
+        'phone'         => '',
+        'pilgrup'       => '',
+        'isdeeplink'    => '',
+        'note'          => '',
     );
 
 
@@ -92,8 +93,6 @@ function wpbc_contacts_form_page_handler()
                     $notice = __('There was an error while updating item', 'wpbc');
                 }
             }
-        } else {
-            $notice = $item_valid;
         }
     } else {
 
@@ -161,10 +160,9 @@ function wpbc_contacts_form_page_handler()
 }
 
 function wpbc_contacts_form_meta_box_handler($item)
-{
+{//ADD CONTACT
 ?>
     <tbody>
-
         <div class="formdatabc">
 
             <form>
@@ -181,7 +179,7 @@ function wpbc_contacts_form_meta_box_handler($item)
                     <p>
                         <label for="phone"><?php _e('Phone :', 'wpbc') ?></label>
                         <br>
-                        <input id="phone" name="phone" type="tel" placeholder="6281225853777 " value="<?php echo esc_attr($item['phone']) ?>">
+                        <input id="phone" name="phone" type="tel" placeholder="6281225853777 " value="<?php echo esc_attr($item['phone']) ?>" required>
                     </p>
                 </div>
 
@@ -189,9 +187,23 @@ function wpbc_contacts_form_meta_box_handler($item)
                     <p>
                         <label for="note"><?php _e('Note :', 'wpbc') ?></label>
                         <br>
-                        <input id="note" name="note" type="tel" value="<?php echo esc_attr($item['note']) ?>" placeholder="Saya ingin memesan ">
+                        <input id="note" name="note" type="tel" value="<?php echo esc_attr($item['note']) ?>" placeholder="Saya ingin memesan " required>
                     </p>
                 </div>
+
+                <div class="form2bc">
+                    <p>
+                        <label for="isdeeplink"><?php _e('Pilih Jenis Link :', 'wpbc') ?></label>
+                        <br>
+
+                        <select id="isdeeplink" name="isdeeplink" required>
+                            <option value="" disabled selected>Pilih Tipe Link</option>
+                            <option value="0">Whatsapp API URL</option>
+                            <option value="1">Whatsapp Deeplink</option>
+                        </select>
+                    </p>
+                </div>
+
                 <div class="form2bc">
                     <p>
                         <label for="pilgrup"><?php _e('Pilih Grub :', 'wpbc') ?></label>
@@ -215,6 +227,7 @@ function wpbc_urls_form_page_handler()
 {
     global $wpdb;
     $table_name3 = $wpdb->prefix . 'urlku';
+    $table_pixeltype = $wpdb->prefix . 'pixel_type';
 
 
     $message = '';
@@ -223,16 +236,29 @@ function wpbc_urls_form_page_handler()
     $default1 = array(
         'id_url'   => '',
         'url_ku'   => '',
+        'pixel_type' => '',
     );
 
+    if (isset($_REQUEST['action'])) {
+
+        if($_REQUEST['action']==="delete"){
+            $urlid = $_REQUEST['id_url'];
+            $wpdb->delete($table_name3, array('id_url'=> $urlid));
+            $message = __('Item was successfully delete', 'wpbc');
+        }
+        else {
+            $result = $wpdb->update($table_name3, $item1, array('id_url' => $item1['id_url']));
+            if ($result){
+                $message = __('Item was successfully Updated', 'wpbc');
+            }
+        }
+    }
 
     if (isset($_REQUEST['nonce']) && wp_verify_nonce($_REQUEST['nonce'], basename(__FILE__))) {
 
         $item1 = shortcode_atts($default1, $_REQUEST);
 
         $item_valid1 = wpbc_validate_link($item1);
-
-
         if ($item_valid1 === true) {
             if ($item1['id_url'] == '') {
                 $user_count = $wpdb->get_var(
@@ -243,21 +269,17 @@ function wpbc_urls_form_page_handler()
                 $item1['id_url'] = $id_url_b;
 
                 $result = $wpdb->insert($table_name3, $item1);
-
                 if ($result) {
                     $message = __('Item was successfully saved', 'wpbc');
                 } else {
                     $notice = __('There was an error while saving item', 'wpbc');
+
                 }
             } else {
 
                 $result = $wpdb->update($table_name3, $item1, array('id_url' => $item1['id_url']));
                 if ($result) {
                     $message = __('Item was successfully Updated', 'wpbc');
-                } else {
-                    $wpdb->delete($table_name3, array('id_url' => $item1['id_url']));
-                    $message = __('Item was successfully delete', 'wpbc');
-                    //$notice = __('There was an error while delete item', 'wpbc');
                 }
             }
         } else {
@@ -265,9 +287,8 @@ function wpbc_urls_form_page_handler()
             $notice = $item_valid1;
         }
     } else {
-
         $item1 = $default1;
-        if (isset($_REQUEST['id_url'])) {
+        if (isset($_REQUEST['id_url']) && isset($_REQUEST['action']) && $_REQUEST['action']!=='delete'){
             $item1 = $wpdb->get_row($wpdb->prepare("SELECT * FROM $table_name3 WHERE id_url = %s", $_REQUEST['id_url']), ARRAY_A);
             if (!$item1) {
                 $item1 = $default1;
@@ -333,14 +354,40 @@ function wpbc_links_form_meta_box_handler($item1)
     <tbody>
         <div class="formdatabc">
             <form>
-
-
                 <div class="form2bc">
+
                     <p>
                         <label for="url_ku"><?php _e('Nama Grup Baru :', 'wpbc') ?></label>
                         <br>
                         <input id="url_ku" name="url_ku" type="text" placeholder="WA Rotator" value="<?php echo esc_attr($item1['url_ku']) ?>" required>
-                        <br><small style="color: #6da38f;">*untuk nambah data klik button Add new grup dan input nama grup,<br> jika edit grup klik pilih dan ubah nama grup, jika hapus klik pilih kemudian save</small>
+                        <br>
+                        <label for="pixel_type"><?php _e('Event Pixel :', 'wpbc') ?></label>
+                        <br>
+
+                        <select
+                            id="pixel_type" name="pixel_type" required
+                        >
+                            <option value="" disabled selected>Pilih Tipe FB Pixel</option>
+                            <option value="AddPaymentInfo" <?=($item1['pixel_type']=="AddPaymentInfo")?'selected':'' ?> >Add Payment Info</option>
+                            <option value="AddToCart" <?=($item1['pixel_type']=="AddToCart")?'selected':'' ?> >Add To Cart</option>
+                            <option value="AddToWishlist" <?=($item1['pixel_type']=="AddToWishlist")?'selected':'' ?> >Add To Wishlist</option>
+                            <option value="CompleteRegistration" <?=($item1['pixel_type']=="CompleteRegistration")?'selected':'' ?> >Complete Registration</option>
+                            <option value="Contact" <?=($item1['pixel_type']=="Contact")?'selected':'' ?> >Contact</option>
+                            <option value="CustomizeProduct" <?=($item1['pixel_type']=="CustomizeProduct")?'selected':'' ?> >Customize Product</option>
+                            <option value="FindLocation" <?=($item1['pixel_type']=="FindLocation")?'selected':'' ?> >Find Location</option>
+                            <option value="InitiateCheckout"  <?=($item1['pixel_type']=="InitiateCheckout")?'selected':'' ?>>Initiate Checkout</option>
+                            <option value="Lead" <?=($item1['pixel_type']=="Lead")?'selected':'' ?> >Lead</option>
+                            <option value="PageView" <?=($item1['pixel_type']=="PageView")?'selected':'' ?> >Page View</option>
+                            <option value="Purchase" <?=($item1['pixel_type']=="Purchase")?'selected':'' ?> >Purchase</option>
+                            <option value="Schedule" <?=($item1['pixel_type']=="Schedule")?'selected':'' ?> >Schedule</option>
+                            <option value="Search" <?=($item1['pixel_type']=="Search")?'selected':'' ?> >Search</option>
+                            <option value="StartTrial" <?=($item1['pixel_type']=="StartTrial")?'selected':'' ?> >Star tTrial</option>
+                            <option value="SubmitApplication" <?=($item1['pixel_type']=="SubmitApplication")?'selected':'' ?> >Submit Application</option>
+                            <option value="Subscribe" <?=($item1['pixel_type']=="Subscribe")?'selected':'' ?> >Subscribe</option>
+                            <option value="ViewContent" <?=($item1['pixel_type']=="ViewContent")?'selected':'' ?> >View Content</option>
+                        </select>
+
+                        <br><small style="color: #6da38f;">*Untuk edit data klik edit kemudian lakukan edit data pada form diatas.</small>
                     </p>
                 </div>
 
@@ -359,6 +406,7 @@ function wpbc_links_form_meta_box_handler($item1)
             <tr>
                 <th scope="col">Id Grup</th>
                 <th scope="col">Nama Grup</th>
+                <th scope="col">Jenis FB Pixel</th>
                 <th scope="col">Pilihan</th>
             </tr>
         </thead>
@@ -368,7 +416,10 @@ function wpbc_links_form_meta_box_handler($item1)
                 <tr>
                     <td><?php echo $row->id_url ?></td>
                     <td><?php echo "$row->url_ku" ?></td>
-                    <td> <a href="?page=urls_form&id_url=<?php echo "$row->id_url" ?>&url_ku=<?php echo "$row->url_ku" ?>">Pilih</a>
+                    <td><?php echo "$row->pixel_type" ?></td>
+                    <td>
+                        <a href="?page=urls_form&id_url=<?php echo "$row->id_url" ?>&url_ku=<?php echo "$row->url_ku&action=edit" ?>">Edit</a> |
+                        <a href="?page=urls_form&id_url=<?php echo "$row->id_url" ?>&url_ku=<?php echo "$row->url_ku&action=delete" ?>">Hapus</a>
                     </td>
                 </tr>
         </tbody>
@@ -394,10 +445,10 @@ function wpbc_ubahs_form_page_handler()
     $notice = '';
 
     $default = array(
-
         'name'      => '',
         'phone'     => '',
         'pilgrup'   => '',
+        'isdeeplink' => '',
         'note'      => '',
     );
 
@@ -405,11 +456,9 @@ function wpbc_ubahs_form_page_handler()
     if (isset($_REQUEST['nonce']) && wp_verify_nonce($_REQUEST['nonce'], basename(__FILE__))) {
 
         $item = shortcode_atts($default, $_REQUEST);
-
         $item_valid = wpbc_validate_ubah($item);
-
         if ($item_valid === true) {
-            $result = $wpdb->update($table_name, $item, array('id' => $item['id']));
+            $result = $wpdb->update($table_name, $item, array('id' => $_REQUEST['id']));
             if ($result) {
                 $message = __('Item was successfully updated', 'wpbc');
             } else {
@@ -490,7 +539,7 @@ function wpbc_ubahs_form_meta_box_handler($item)
                     <p>
                         <label for="name"><?php _e('Name :', 'wpbc') ?></label>
                         <br>
-                        <input id="name" name="name" type="text" placeholder="Name " value="<?php echo esc_attr($item['name']) ?>" required>
+                        <input id="name" name="name" type="text" placeholder="NameB" value="<?php echo esc_attr($item['name']) ?>" required>
                     </p>
                 </div>
 
@@ -509,6 +558,20 @@ function wpbc_ubahs_form_meta_box_handler($item)
                         <input id="note" name="note" type="tel" value="<?php echo esc_attr($item['note']) ?>" placeholder="Saya ingin memesan ">
                     </p>
                 </div>
+
+                <div class="form2bc">
+                    <p>
+                        <label for="isdeeplink"><?php _e('Pilih Jenis Link :', 'wpbc') ?></label>
+                        <br>
+
+                        <select id="isdeeplink" name="isdeeplink" required>
+                            <option value="" disabled selected>Pilih Tipe Link</option>
+                            <option value="0" <?=($item['isdeeplink']=="0")?'selected':''?> >Whatsapp API URL</option>
+                            <option value="1" <?=($item['isdeeplink']=="1")?'selected':''?> >Whatsapp Deeplink</option>
+                        </select>
+                    </p>
+                </div>
+
                 <div class="form2bc">
                     <p>
                         <label for="pilgrup"><?php _e('Pilih Grub :', 'wpbc') ?></label>
