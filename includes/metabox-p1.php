@@ -590,7 +590,9 @@ function wpbc_ubahs_form_meta_box_handler($item)
                         <br>
 
                         <select id="pilgrup" name="pilgrup">
-                            <option value="<?php echo esc_attr($item['pilgrup']) ?>"><?php echo esc_attr($item['pilgrup']) ?></option>
+                            <?php foreach (ambil_data_url() as $row) { ?>
+                                <option value="<?php echo $row->id_url ?>" <?=($row->id_url === $item['pilgrup'])?'selected':''?> ><?php echo "$row->url_ku" ?></option>
+                            <?php } ?>
                         </select>
                     </p>
                 </div>
