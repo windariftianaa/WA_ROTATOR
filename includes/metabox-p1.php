@@ -583,15 +583,15 @@ function wpbc_ubahs_form_meta_box_handler($item)
                         </select>
                     </p>
                 </div>
-
                 <div class="form2bc">
                     <p>
                         <label for="pilgrup"><?php _e('Pilih Grub :', 'wpbc') ?></label>
                         <br>
 
                         <select id="pilgrup" name="pilgrup">
+
                             <?php foreach (ambil_data_url() as $row) { ?>
-                                <option value="<?php echo $row->id_url ?>" <?=($row->id_url === $item['pilgrup'])?'selected':''?> ><?php echo "$row->url_ku" ?></option>
+                                <option value="<?php echo $row->id_url ?>" <?=($row->id_url === $item['pilgrup'])?'selected':''?> ><?=$row->url_ku?> - <?=$row->pixel_type?></option>
                             <?php } ?>
                         </select>
                     </p>
